@@ -3,6 +3,7 @@
 <head>
     <title>Weather Event Tracking Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         #map { height: 700px; }
         .refresh-button {
@@ -16,11 +17,21 @@
             cursor: pointer;
         }
         .weather-icon {
-            width: 32px;
-            height: 32px;
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
-        .popup-content { min-width: 200px; }
+        .popup-content {
+            min-width: 250px;
+            font-family: Arial, sans-serif;
+        }
+        .popup-content h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .popup-content p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -29,17 +40,17 @@
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
-        // Weather icon configuration
+        // Weather icon configuration using Font Awesome
         const iconConfig = {
-            'tornado': 'https://openweathermap.org/img/wn/tornado.png',
-            'funnel cloud': 'https://www.weather.gov/grb/funnel_cloud',
-            'hail': 'https://openweathermap.org/img/wn/hail.png',
-            'damaging winds': 'https://openweathermap.org/img/wn/strong-wind.png',
-            'dense fog': 'https://openweathermap.org/img/wn/fog.png',
-            'heavy snow': 'https://openweathermap.org/img/wn/snow.png',
-            'fire': 'https://openweathermap.org/img/wn/fire.png',
-            'flooding': 'https://openweathermap.org/img/wn/flood.png',
-            'severe thunderstorm': 'https://openweathermap.org/img/wn/thunderstorm.png'
+            'tornado': {icon: 'fa-tornado', color: '#dc3545'},
+            'funnel cloud': {icon: 'fa-funnel-cloud', color: '#6f42c1'},
+            'hail': {icon: 'fa-cloud-meatball', color: '#17a2b8'},
+            'damaging winds': {icon: 'fa-wind', color: '#ffc107'},
+            'dense fog': {icon: 'fa-smog', color: '#6c757d'},
+            'heavy snow': {icon: 'fa-snowflake', color: '#0dcaf0'},
+            'fire': {icon: 'fa-fire', color: '#fd7e14'},
+            'flooding': {icon: 'fa-house-flood-water', color: '#0d6efd'},
+            'severe thunderstorm': {icon: 'fa-bolt', color: '#ffd700'}
         };
 
         const map = L.map('map').setView([37.8, -96], 4);
@@ -52,39 +63,50 @@
             try {
                 const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRho62D5FolDwqTj_VkQDuT5K1yBMawOhib6dtH4t0i6wdRYIjbArb9EjsqLlDMeWMS-UAysMEq8drb/pub?output=csv');
                 const csvData = await response.text();
-                const rows = csvData.split('\n').slice(1); // Skip header
+                const rows = csvData.split('\n').slice(1); // Skip header row
+
+                // Clear old markers
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+                processedEntries.clear();
 
                 for (const row of rows) {
                     const columns = row.split(',');
                     // Column indexes (0-based):
-                    const timestamp = columns[0];    // Column 1 in Sheets
-                    const name = columns[1];        // Column 2 in Sheets
-                    const spotterId = columns[2];   // Column 3 in Sheets
-                    const zip = columns[3];          // Column 4 in Sheets
-                    const event = columns[5];        // Column 6 in Sheets
-                    const notes = columns[6];        // Column 7 in Sheets
+                    const timestamp = columns[0];    // Column A (1) - Timestamp
+                    const name = columns[1];        // Column B (2) - Name
+                    const spotterId = columns[2];   // Column C (3) - Spotter ID
+                    const zip = columns[3]?.trim(); // Column D (4) - ZIP Code
+                    const event = columns[5]?.trim().toLowerCase(); // Column F (6) - Event Type
+                    const notes = columns[6];       // Column G (7) - Notes
+                    
+                    if (!zip || !event) continue;
                     
                     const entryKey = `${zip}-${event}-${timestamp}`;
-                    if (!zip || !event || processedEntries.has(entryKey)) continue;
+                    if (processedEntries.has(entryKey)) continue;
 
                     const coords = await geocodeZip(zip);
                     if (coords) {
-                        const icon = L.icon({
-                            iconUrl: iconConfig[event.toLowerCase()] || 'https://openweathermap.org/img/wn/unknown.png',
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 32]
+                        const iconSettings = iconConfig[event] || {icon: 'fa-question-circle', color: '#000000'};
+                        
+                        const customIcon = L.divIcon({
+                            className: 'weather-icon',
+                            html: `<i class="fas ${iconSettings.icon}" 
+                                   style="color: ${iconSettings.color};"></i>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 24]
                         });
 
-                        const marker = L.marker(coords, { icon })
+                        const marker = L.marker(coords, { icon: customIcon })
                             .addTo(map)
                             .bindPopup(`
                                 <div class="popup-content">
                                     <h3>${event.toUpperCase()}</h3>
-                                    <p><strong>Name:</strong> ${name}</p>
+                                    <p><strong>Reporter:</strong> ${name}</p>
                                     <p><strong>Spotter ID:</strong> ${spotterId}</p>
-                                    <p><strong>ZIP:</strong> ${zip}</p>
-                                    <p><strong>Time:</strong> ${new Date(timestamp).toLocaleString()}</p>
-                                    <p><strong>Notes:</strong> ${notes}</p>
+                                    <p><strong>ZIP Code:</strong> ${zip}</p>
+                                    <p><strong>Timestamp:</strong> ${formatTimestamp(timestamp)}</p>
+                                    <p><strong>Notes:</strong> ${notes || 'No additional notes'}</p>
                                 </div>
                             `);
 
@@ -94,6 +116,21 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
+            }
+        }
+
+        function formatTimestamp(timestamp) {
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch {
+                return 'Invalid date';
             }
         }
 
