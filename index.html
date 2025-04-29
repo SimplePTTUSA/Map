@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Weather Event Map</title>
+    <title>Weather Event Tracking Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-        #map { height: 600px; }
+        #map { height: 700px; }
         .refresh-button {
             position: absolute;
             top: 10px;
@@ -20,55 +20,26 @@
             height: 32px;
             filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
         }
+        .popup-content { min-width: 200px; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <button class="refresh-button" onclick="loadData()">Refresh Data</button>
 
-    <!-- SVG Icon Definitions -->
-    <svg style="display:none;">
-        <symbol id="tornado-icon" viewBox="0 0 24 24">
-            <path fill="red" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-1-2h3l-1 2zm0-4l-1-2h3l-1 2zm0-4l-1-2h3l-1 2zm4 8l-1-2h3l-1 2zm0-4l-1-2h3l-1 2zm0-4l-1-2h3l-1 2z"/>
-        </symbol>
-        <symbol id="funnel-cloud-icon" viewBox="0 0 24 24">
-            <path fill="#8A2BE2" d="M14.25 2.26l-.08-.04-.01.02C13.46 2.09 12.74 2 12 2 6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10c0-4.75-3.31-8.72-7.75-9.74zM19.41 9h-7.99l2.71-4.7c2.4.66 4.35 2.42 5.28 4.7zM13.1 4.08L10.27 9l-1.15 2L6.4 6.3C7.84 4.88 9.82 4 12 4c.37 0 .74.03 1.1.08zM5.7 7.09L8.54 12l1.15 2H4.26C4.1 13.36 4 12.69 4 12c0-1.85.64-3.55 1.7-4.91zM4.59 15h7.98l-2.71 4.7c-2.4-.67-4.34-2.42-5.27-4.7zm6.31 4.91L14.89 13l2.72 4.7C16.16 19.12 14.18 20 12 20c-.38 0-.74-.03-1.1-.09zM19.3 16.91L16.46 12l-1.14-2h5.29c.17 1.38.29 2.05.29 2.63 0 1.84-.64 3.54-1.7 4.91z"/>
-        </symbol>
-        <symbol id="hail-icon" viewBox="0 0 24 24">
-            <path fill="#1E90FF" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-1.5-1.5L8 17l1.5 1.5L11 17zm0-4l-1.5-1.5L8 13l1.5 1.5L11 13zm0-4l-1.5-1.5L8 9l1.5 1.5L11 9zm3 8l-1.5-1.5L14 17l1.5 1.5L17 17zm0-4l-1.5-1.5L14 13l1.5 1.5L17 13zm0-4l-1.5-1.5L14 9l1.5 1.5L17 9z"/>
-        </symbol>
-        <symbol id="wind-icon" viewBox="0 0 24 24">
-            <path fill="#FF8C00" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm2.59-11.41L16 10l-4 4-4-4 1.41-1.41L11 10.17V6h2v4.17l1.59-1.58z"/>
-        </symbol>
-        <symbol id="fog-icon" viewBox="0 0 24 24">
-            <path fill="#696969" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm2-14H10v2h4V6zm-4 8v-2h4v2h-4zm-4 0v-2h2v2H6zm8 4v-2h2v2h-2z"/>
-        </symbol>
-        <symbol id="snowflake-icon" viewBox="0 0 24 24">
-            <path fill="#FFFFFF" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-11h-2v3H8v2h3v3h2v-3h3v-2h-3V9z"/>
-        </symbol>
-        <symbol id="fire-icon" viewBox="0 0 24 24">
-            <path fill="#FF4500" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-4h2v2h-2zm0-10h2v6h-2z"/>
-        </symbol>
-        <symbol id="flood-icon" viewBox="0 0 24 24">
-            <path fill="#0000FF" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-11h-2v2h2V9zm0 4h-2v2h2v-2z"/>
-        </symbol>
-        <symbol id="thunderstorm-icon" viewBox="0 0 24 24">
-            <path fill="#FFFF00" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-4h2v2h-2zm0-10h2v6h-2z"/>
-        </symbol>
-    </svg>
-
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
-        const iconMap = {
-            'tornado': '#tornado-icon',
-            'funnel cloud': '#funnel-cloud-icon',
-            'hail': '#hail-icon',
-            'damaging winds': '#wind-icon',
-            'dense fog': '#fog-icon',
-            'heavy snow': '#snowflake-icon',
-            'fire': '#fire-icon',
-            'flooding': '#flood-icon',
-            'severe thunderstorm': '#thunderstorm-icon'
+        // Weather icon configuration
+        const iconConfig = {
+            'tornado': 'https://openweathermap.org/img/wn/tornado.png',
+            'funnel cloud': 'https://www.weather.gov/grb/funnel_cloud',
+            'hail': 'https://openweathermap.org/img/wn/hail.png',
+            'damaging winds': 'https://openweathermap.org/img/wn/strong-wind.png',
+            'dense fog': 'https://openweathermap.org/img/wn/fog.png',
+            'heavy snow': 'https://openweathermap.org/img/wn/snow.png',
+            'fire': 'https://openweathermap.org/img/wn/fire.png',
+            'flooding': 'https://openweathermap.org/img/wn/flood.png',
+            'severe thunderstorm': 'https://openweathermap.org/img/wn/thunderstorm.png'
         };
 
         const map = L.map('map').setView([37.8, -96], 4);
@@ -81,30 +52,44 @@
             try {
                 const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRho62D5FolDwqTj_VkQDuT5K1yBMawOhib6dtH4t0i6wdRYIjbArb9EjsqLlDMeWMS-UAysMEq8drb/pub?output=csv');
                 const csvData = await response.text();
-                const rows = csvData.split('\n').slice(1);
+                const rows = csvData.split('\n').slice(1); // Skip header
 
                 for (const row of rows) {
                     const columns = row.split(',');
-                    const zip = columns[3]?.trim();
-                    const event = columns[5]?.trim().toLowerCase();
+                    // Column indexes (0-based):
+                    const timestamp = columns[0];    // Column 1 in Sheets
+                    const name = columns[1];        // Column 2 in Sheets
+                    const spotterId = columns[2];   // Column 3 in Sheets
+                    const zip = columns[3];          // Column 4 in Sheets
+                    const event = columns[5];        // Column 6 in Sheets
+                    const notes = columns[6];        // Column 7 in Sheets
                     
-                    if (!zip || !event || processedEntries.has(zip+event)) continue;
+                    const entryKey = `${zip}-${event}-${timestamp}`;
+                    if (!zip || !event || processedEntries.has(entryKey)) continue;
 
                     const coords = await geocodeZip(zip);
                     if (coords) {
-                        const icon = L.divIcon({
-                            className: 'weather-icon',
-                            html: `<svg class="weather-icon">
-                                     <use href="${iconMap[event] || '#tornado-icon'}"></use>
-                                  </svg>`
+                        const icon = L.icon({
+                            iconUrl: iconConfig[event.toLowerCase()] || 'https://openweathermap.org/img/wn/unknown.png',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 32]
                         });
 
                         const marker = L.marker(coords, { icon })
                             .addTo(map)
-                            .bindPopup(`<b>${event.toUpperCase()}</b><br>ZIP: ${zip}`);
+                            .bindPopup(`
+                                <div class="popup-content">
+                                    <h3>${event.toUpperCase()}</h3>
+                                    <p><strong>Name:</strong> ${name}</p>
+                                    <p><strong>Spotter ID:</strong> ${spotterId}</p>
+                                    <p><strong>ZIP:</strong> ${zip}</p>
+                                    <p><strong>Time:</strong> ${new Date(timestamp).toLocaleString()}</p>
+                                    <p><strong>Notes:</strong> ${notes}</p>
+                                </div>
+                            `);
 
                         markers.push(marker);
-                        processedEntries.add(zip+event);
+                        processedEntries.add(entryKey);
                     }
                 }
             } catch (error) {
@@ -125,6 +110,7 @@
             }
         }
 
+        // Initial load and refresh every 5 minutes
         loadData();
         setInterval(loadData, 300000);
     </script>
